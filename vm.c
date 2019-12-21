@@ -35,6 +35,8 @@ int CSP = -1;
 int PC_STACK[1000];
 int PSP = -1;
 
+int ERROR_CODE = 0;
+
 void print_memory() {
     int i = 0;
     printf("Stack ");
@@ -58,10 +60,10 @@ void print_memory() {
         printf("%d ", MEMORY[i]);
     }
 
-//    printf("\nHeap %d: ", HEAP_START);
-//    for (; i < MEMORY_SIZE; i++) {
-//        printf("%d ", MEMORY[i]);
-//    }
+    printf("\nHeap %lld: ", HEAP_START);
+    for (; i < HEAP_START + 20; i++) {
+        printf("%d ", MEMORY[i]);
+    }
     printf("\n");
 }
 
@@ -141,17 +143,35 @@ void int_cmp(int64_t *reg1, int64_t *reg2, int64_t *reg3, int64_t *reg4) {
     read_3_true_ptr(reg1, reg2, reg3);
 }
 
+void native_printf() {
+
+}
+
+void native_malloc(int64_t argc, int64_t ret_len, int64_t ret_ptr, int64_t *argv) {
+    if (argc != 1 || ret_len != PTR_LEN) {
+        printf("Unmatched arg length or return length");
+        return;
+    }
+    int64_t result = HEAP_START;
+    int_to_bytes(MEMORY + ret_ptr, result);
+}
+
+void native_clock(int64_t arg_count, int64_t ret_len, int64_t ret_ptr) {
+    int64_t t = clock();
+    if (arg_count != 0 || ret_len != INT_LEN) {
+        printf("Unmatched arg length or return length");
+        return;
+    }
+    int_to_bytes(MEMORY + ret_ptr, t);
+}
+
 void call_native(int64_t func, int64_t ret_ptr, int64_t ret_len, int64_t arg_count, int64_t *arg_array) {
     switch (func) {
         case 1:  // clock
-            int64_t t = clock();
-            if (arg_count != 0 || ret_len != INT_LEN) {
-                printf("Unmatched arg length or return length");
-                return;
-            }
-            int_to_bytes(MEMORY + ret_ptr, t);
+            native_clock(arg_count, ret_len, ret_ptr);
             break;
-        case 2:
+        case 2:  // malloc
+            native_malloc(arg_count, ret_len, ret_ptr, arg_array);
             break;
         default:
             printf("Unknown native function %lld", func);
@@ -200,13 +220,16 @@ void vm_run() {
                     reg4 += PTR_LEN;
                     reg7 = bytes_to_int(MEMORY + reg4);  // arg_len
                     reg4 += INT_LEN;
-                    reg8 = true_ptr(reg6);  // true arg ptr
-                    mem_copy(reg8, SP, reg7);
+                    reg6 = true_ptr(reg6);  // true arg ptr
+                    mem_copy(reg6, SP, reg7);
                     SP += reg7;
+                    printf("%lld\n", reg6);
                 }
 
                 PC_STACK[++PSP] = PC;
                 CALL_STACK[++CSP] = reg5;
+
+                printf("sp: %lld\n", reg5);
 
                 PC = reg1;
                 break;
@@ -247,6 +270,27 @@ void vm_run() {
                 reg4 = bytes_to_int(MEMORY + reg2);  // left value
                 reg5 = bytes_to_int(MEMORY + reg3);  // right value
                 reg6 = reg4 - reg5;  // result
+                int_to_bytes(MEMORY + reg1, reg6);
+                break;
+            case 13:  // MUL INT
+                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                reg4 = bytes_to_int(MEMORY + reg2);  // left value
+                reg5 = bytes_to_int(MEMORY + reg3);  // right value
+                reg6 = reg4 * reg5;  // result
+                int_to_bytes(MEMORY + reg1, reg6);
+                break;
+            case 14:  // DIV INT
+                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                reg4 = bytes_to_int(MEMORY + reg2);  // left value
+                reg5 = bytes_to_int(MEMORY + reg3);  // right value
+                reg6 = reg4 / reg5;  // result
+                int_to_bytes(MEMORY + reg1, reg6);
+                break;
+            case 15:  // MOD INT
+                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                reg4 = bytes_to_int(MEMORY + reg2);  // left value
+                reg5 = bytes_to_int(MEMORY + reg3);  // right value
+                reg6 = reg4 % reg5;  // result
                 int_to_bytes(MEMORY + reg1, reg6);
                 break;
             case 16:  // EQ
@@ -315,10 +359,11 @@ void vm_run() {
             case 33:  // UNPACK ADDR
                 read_3_ints(&reg1, &reg2, &reg3);  // result ptr, pointer address, length
                 reg1 = true_ptr(reg1);
-                reg2 = true_ptr(reg2);   // address storing the address
-                reg4 = bytes_to_int(MEMORY + reg2);  // value address
+                reg2 = true_ptr(reg2);   // address of pointer
+
+                reg4 = bytes_to_int(MEMORY + reg2);  // address stored in pointer
                 reg4 = true_ptr(reg4);
-                printf("%lld %lld\n", reg2, reg4);
+//                printf("%lld %lld\n", reg2, reg4);
                 mem_copy(reg4, reg1, reg3);
                 break;
             case 34:  // PTR ASSIGN
@@ -331,8 +376,16 @@ void vm_run() {
                 mem_copy(reg2, reg4, reg3);
                 break;
             default:
-                printf("Unknown instruction %d\n", instruction);
+                fprintf(stderr, "Unknown instruction %d\n", instruction);
                 return;
+        }
+        if (ERROR_CODE != 0) {
+            fprintf(stderr, "Error code: %d \n", ERROR_CODE);
+            return;
+        }
+        if (MEMORY[0] != 0) {
+            fprintf(stderr, "Segmentation fault: core dumped \n");
+            return;
         }
     }
 }
