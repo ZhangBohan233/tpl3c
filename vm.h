@@ -7,12 +7,7 @@
 
 #include <stdint.h>
 
-extern const int INT_LEN;
-extern const int PTR_LEN;
-const int FLOAT_LEN;
-const int CHAR_LEN;
-extern const int BOOLEAN_LEN;
-const int VOID_LEN;
+extern const int INT_LEN, PTR_LEN, FLOAT_LEN, CHAR_LEN, BOOLEAN_LEN, VOID_LEN;
 
 void vm_load(const unsigned char *codes, int read);
 

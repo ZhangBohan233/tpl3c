@@ -10,12 +10,46 @@
 #include "vm.h"
 #include "lib.h"
 
+#define true_ptr(ptr) (ptr < LITERAL_START && CSP >= 0 ? ptr + CALL_STACK[CSP] : ptr)
+
+#define read_2_ints {\
+reg1 = bytes_to_int(MEMORY + PC);\
+reg2 = bytes_to_int(MEMORY + PC + INT_LEN);\
+PC += INT_LEN_2;\
+}
+
+#define read_3_ints {\
+reg1 = bytes_to_int(MEMORY + PC);\
+reg2 = bytes_to_int(MEMORY + PC + INT_LEN);\
+reg3 = bytes_to_int(MEMORY + PC + INT_LEN_2);\
+PC += INT_LEN_3;\
+}
+
+#define read_4_ints {\
+reg1 = bytes_to_int(MEMORY + PC);\
+reg2 = bytes_to_int(MEMORY + PC + INT_LEN);\
+reg3 = bytes_to_int(MEMORY + PC + INT_LEN_2);\
+reg4 = bytes_to_int(MEMORY + PC + INT_LEN_3);\
+PC += INT_LEN_4;\
+}
+
+#define read_3_true_ptr {\
+read_3_ints;\
+reg1 = true_ptr(reg1);\
+reg2 = true_ptr(reg2);\
+reg3 = true_ptr(reg3);\
+}
+
 const int INT_LEN = 8;
 const int PTR_LEN = 8;
 const int FLOAT_LEN = 8;
 const int CHAR_LEN = 1;
 const int BOOLEAN_LEN = 1;
 const int VOID_LEN = 0;
+
+const int INT_LEN_2 = 16;
+const int INT_LEN_3 = 24;
+const int INT_LEN_4 = 32;
 
 const int64_t STACK_START = 1;
 int64_t LITERAL_START = 1024;
@@ -109,45 +143,45 @@ void exit_func() {
     PC = PC_STACK[PSP--];
 }
 
-int64_t true_ptr(int64_t ptr) {
-    if (ptr < LITERAL_START && CSP >= 0) {
-        return ptr + CALL_STACK[CSP];
-    }
-    if (ptr >= MEMORY_SIZE) {
-        fprintf(stderr, "\nCannot access address %lld\n", ptr);
-        ERROR_CODE = 1;
-        return 0;
-    }
-    return ptr;
-}
+//int64_t true_ptr(int64_t ptr) {
+//    if (ptr < LITERAL_START && CSP >= 0) {
+//        return ptr + CALL_STACK[CSP];
+//    }
+//    if (ptr >= MEMORY_SIZE) {
+//        fprintf(stderr, "\nCannot access address %lld\n", ptr);
+//        ERROR_CODE = 1;
+//        return 0;
+//    }
+//    return ptr;
+//}
 
-void read_2_ints(int64_t *reg1, int64_t *reg2) {
-    *reg1 = bytes_to_int(MEMORY + PC);
-    *reg2 = bytes_to_int(MEMORY + PC + INT_LEN);
-    PC += INT_LEN * 2;
-}
+//void read_2_ints(int64_t *reg1, int64_t *reg2) {
+//    *reg1 = bytes_to_int(MEMORY + PC);
+//    *reg2 = bytes_to_int(MEMORY + PC + INT_LEN);
+//    PC += INT_LEN * 2;
+//}
 
-void read_3_ints(int64_t *reg1, int64_t *reg2, int64_t *reg3) {
-    *reg1 = bytes_to_int(MEMORY + PC);
-    *reg2 = bytes_to_int(MEMORY + PC + INT_LEN);
-    *reg3 = bytes_to_int(MEMORY + PC + INT_LEN * 2);
-    PC += INT_LEN * 3;
-}
+//void read_3_ints(int64_t *reg1, int64_t *reg2, int64_t *reg3) {
+//    *reg1 = bytes_to_int(MEMORY + PC);
+//    *reg2 = bytes_to_int(MEMORY + PC + INT_LEN);
+//    *reg3 = bytes_to_int(MEMORY + PC + INT_LEN * 2);
+//    PC += INT_LEN * 3;
+//}
+//
+//void read_4_ints(int64_t *reg1, int64_t *reg2, int64_t *reg3, int64_t *reg4) {
+//    *reg1 = bytes_to_int(MEMORY + PC);
+//    *reg2 = bytes_to_int(MEMORY + PC + INT_LEN);
+//    *reg3 = bytes_to_int(MEMORY + PC + INT_LEN * 2);
+//    *reg4 = bytes_to_int(MEMORY + PC + INT_LEN * 3);
+//    PC += INT_LEN * 4;
+//}
 
-void read_4_ints(int64_t *reg1, int64_t *reg2, int64_t *reg3, int64_t *reg4) {
-    *reg1 = bytes_to_int(MEMORY + PC);
-    *reg2 = bytes_to_int(MEMORY + PC + INT_LEN);
-    *reg3 = bytes_to_int(MEMORY + PC + INT_LEN * 2);
-    *reg4 = bytes_to_int(MEMORY + PC + INT_LEN * 3);
-    PC += INT_LEN * 4;
-}
-
-void read_3_true_ptr(int64_t *reg1, int64_t *reg2, int64_t *reg3) {
-    read_3_ints(reg1, reg2, reg3);
-    *reg1 = true_ptr(*reg1);
-    *reg2 = true_ptr(*reg2);
-    *reg3 = true_ptr(*reg3);
-}
+//void read_3_true_ptr(int64_t *reg1, int64_t *reg2, int64_t *reg3) {
+//    read_3_ints(reg1, reg2, reg3);
+//    *reg1 = true_ptr(*reg1);
+//    *reg2 = true_ptr(*reg2);
+//    *reg3 = true_ptr(*reg3);
+//}
 
 //void int_cmp(int64_t *reg1, int64_t *reg2, int64_t *reg3, int64_t *reg4) {
 //    read_3_true_ptr(reg1, reg2, reg3);
@@ -283,7 +317,7 @@ void vm_run() {
     unsigned char reg11;
     unsigned char reg12;
 
-    unsigned char instruction;
+    register unsigned char instruction;
 
     while (PC < HEAP_START) {
         instruction = MEMORY[PC++];
@@ -292,13 +326,13 @@ void vm_run() {
                 exit_func();
                 break;
             case 3:  // ASSIGN
-                read_3_ints(&reg1, &reg2, &reg3);  // tar, src, len
-                reg4 = true_ptr(reg1);  // true tar
-                reg5 = true_ptr(reg2);  // true src
-                mem_copy(reg5, reg4, reg3);
+                read_3_ints  // tar, src, len
+                reg1 = true_ptr(reg1);  // true tar
+                reg2 = true_ptr(reg2);  // true src
+                mem_copy(reg2, reg1, reg3);
                 break;
             case 4:  // CALL
-                read_3_ints(&reg1, &reg2, &reg3);  // func_ptr, r_len, arg_count
+                read_3_ints  // func_ptr, r_len, arg_count
                 reg4 = PC;  // pc backup
                 PC += reg3 * (INT_LEN + PTR_LEN);
                 reg5 = SP;  // sp backup
@@ -322,7 +356,7 @@ void vm_run() {
                 PC = reg1;
                 break;
             case 5:  // RETURN
-                read_2_ints(&reg1, &reg2);  // value ptr, rtype len
+                read_2_ints  // value ptr, rtype len
                 reg3 = true_ptr(reg1);  // true value ptr
 
                 reg4 = CALL_STACK[CSP] - reg2;  // where to put the return value
@@ -341,48 +375,48 @@ void vm_run() {
                 SP += reg1;
                 break;
             case 8:  // ASSIGN_I
-                read_2_ints(&reg1, &reg2);
+                read_2_ints
                 reg1 = true_ptr(reg1);
                 int_to_bytes(MEMORY + reg1, reg2);
 //                printf("%lld %lld\n", reg1, reg2);
                 break;
             case 10:  // ADD INT
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg4 = bytes_to_int(MEMORY + reg2);  // left value
                 reg5 = bytes_to_int(MEMORY + reg3);  // right value
                 reg6 = reg4 + reg5;  // result
                 int_to_bytes(MEMORY + reg1, reg6);
                 break;
             case 12:  // SUB INT
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg4 = bytes_to_int(MEMORY + reg2);  // left value
                 reg5 = bytes_to_int(MEMORY + reg3);  // right value
                 reg6 = reg4 - reg5;  // result
                 int_to_bytes(MEMORY + reg1, reg6);
                 break;
             case 13:  // MUL INT
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg4 = bytes_to_int(MEMORY + reg2);  // left value
                 reg5 = bytes_to_int(MEMORY + reg3);  // right value
                 reg6 = reg4 * reg5;  // result
                 int_to_bytes(MEMORY + reg1, reg6);
                 break;
             case 14:  // DIV INT
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg4 = bytes_to_int(MEMORY + reg2);  // left value
                 reg5 = bytes_to_int(MEMORY + reg3);  // right value
                 reg6 = reg4 / reg5;  // result
                 int_to_bytes(MEMORY + reg1, reg6);
                 break;
             case 15:  // MOD INT
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg4 = bytes_to_int(MEMORY + reg2);  // left value
                 reg5 = bytes_to_int(MEMORY + reg3);  // right value
                 reg6 = reg4 % reg5;  // result
                 int_to_bytes(MEMORY + reg1, reg6);
                 break;
             case 16:  // EQ
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg4 = bytes_to_int(MEMORY + reg2);  // left value
                 reg5 = bytes_to_int(MEMORY + reg3);  // right value
                 reg6 = reg4 - reg5;  // cmp_result
@@ -391,7 +425,7 @@ void vm_run() {
                 MEMORY[reg1] = reg11;
                 break;
             case 17:  // GT
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg4 = bytes_to_int(MEMORY + reg2);  // left value
                 reg5 = bytes_to_int(MEMORY + reg3);  // right value
                 reg6 = reg4 - reg5;  // cmp_result
@@ -400,7 +434,7 @@ void vm_run() {
                 MEMORY[reg1] = reg11;
                 break;
             case 18:  // LT
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg4 = bytes_to_int(MEMORY + reg2);  // left value
                 reg5 = bytes_to_int(MEMORY + reg3);  // right value
                 reg6 = reg4 - reg5;  // cmp_result
@@ -409,21 +443,21 @@ void vm_run() {
                 MEMORY[reg1] = reg11;
                 break;
             case 19:  // AND
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg11 = MEMORY[reg2];  // left value
                 reg12 = MEMORY[reg3];  // right value
                 reg11 = reg11 && reg12;
                 MEMORY[reg1] = reg11;
                 break;
             case 20:  // OR
-                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                read_3_true_ptr  // res ptr, left ptr, right ptr
                 reg11 = MEMORY[reg2];  // left value
                 reg12 = MEMORY[reg3];  // right value
                 reg11 = reg11 || reg12;
                 MEMORY[reg1] = reg11;
                 break;
             case 30:  // IF ZERO GOTO
-                read_2_ints(&reg1, &reg2);  // skip len, cond ptr
+                read_2_ints  // skip len, cond ptr
                 reg2 = true_ptr(reg2);  // true cond ptr
 
                 reg11 = MEMORY[reg2];
@@ -433,7 +467,7 @@ void vm_run() {
                 }
                 break;
             case 31:  // NATIVE CALL
-                read_4_ints(&reg1, &reg2, &reg3, &reg4);  // func ptr, rtype len, r ptr, arg count
+                read_4_ints  // func ptr, rtype len, r ptr, arg count
                 reg5 = bytes_to_int(MEMORY + reg1);  // function code
                 reg3 = true_ptr(reg3);  // true return ptr
                 reg6 = PC;  // PC backup
@@ -455,7 +489,7 @@ void vm_run() {
                 free(args);
                 break;
             case 33:  // UNPACK ADDR
-                read_3_ints(&reg1, &reg2, &reg3);  // result ptr, pointer address, length
+                read_3_ints  // result ptr, pointer address, length
                 reg1 = true_ptr(reg1);
                 reg2 = true_ptr(reg2);   // address of pointer
 
@@ -465,7 +499,7 @@ void vm_run() {
                 mem_copy(reg4, reg1, reg3);
                 break;
             case 34:  // PTR ASSIGN
-                read_3_ints(&reg1, &reg2, &reg3);  // address of ptr, src, len
+                read_3_ints  // address of ptr, src, len
                 reg1 = true_ptr(reg1);
                 reg2 = true_ptr(reg2);
                 reg4 = bytes_to_int(MEMORY + reg1);  // address of value
@@ -503,15 +537,44 @@ void vm_run() {
 }
 
 int main(int argc, char **argv) {
+    if (argc < 2) {
+        printf("Usage: tpl.exe -[FLAG] TPC_FILE");
+        exit(1);
+    }
+
+    int p_memory = 0;
+    int p_exit = 0;
+    char *file_name = argv[1];
+
+    for (int i = 1; i < argc; i++) {
+        char *arg = argv[i];
+        if (arg[0] == '-') {
+            switch (arg[1]) {
+                case 'e':
+                    p_exit = 1;
+                    break;
+                case 'm':
+                    p_memory = 1;
+                    break;
+                default:
+                    printf("Unknown flag: -%c", arg[1]);
+                    break;
+            }
+        } else {
+            file_name = arg;
+        }
+    }
+
     int read;
 
-    unsigned char *codes = read_file(argv[1], &read);
-//    printf("%d\n", sizeof(unsigned char));
+    unsigned char *codes = read_file(file_name, &read);
 
     vm_load(codes, read);
 
     vm_run();
 
-    print_memory();
-    printf("Process finished with exit code %lld\n", bytes_to_int(MEMORY + 1));
+    if (p_memory) print_memory();
+    if (p_exit) printf("Process finished with exit code %lld\n", bytes_to_int(MEMORY + 1));
+
+    exit(0);
 }
