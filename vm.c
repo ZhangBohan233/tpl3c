@@ -408,6 +408,20 @@ void vm_run() {
                 reg11 = reg6 < 0 ? 1 : 0;
                 MEMORY[reg1] = reg11;
                 break;
+            case 19:  // AND
+                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                reg11 = MEMORY[reg2];  // left value
+                reg12 = MEMORY[reg3];  // right value
+                reg11 = reg11 && reg12;
+                MEMORY[reg1] = reg11;
+                break;
+            case 20:  // OR
+                read_3_true_ptr(&reg1, &reg2, &reg3);  // res ptr, left ptr, right ptr
+                reg11 = MEMORY[reg2];  // left value
+                reg12 = MEMORY[reg3];  // right value
+                reg11 = reg11 || reg12;
+                MEMORY[reg1] = reg11;
+                break;
             case 30:  // IF ZERO GOTO
                 read_2_ints(&reg1, &reg2);  // skip len, cond ptr
                 reg2 = true_ptr(reg2);  // true cond ptr

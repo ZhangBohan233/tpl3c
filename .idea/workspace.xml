@@ -16,7 +16,9 @@
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/tpl3.exe" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/tpl3.exe" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/tpl3.ilk" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/tpl3.ilk" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/tpl3.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/tpl3.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tp/cmp.tpc" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/vm.c" beforeDir="false" afterPath="$PROJECT_DIR$/vm.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vm.h" beforeDir="false" afterPath="$PROJECT_DIR$/vm.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -84,7 +86,7 @@
       <workItem from="1576645200751" duration="2673000" />
       <workItem from="1576806873577" duration="16470000" />
       <workItem from="1576876944564" duration="7456000" />
-      <workItem from="1576893500463" duration="32943000" />
+      <workItem from="1576893500463" duration="35451000" />
     </task>
     <servers />
   </component>
@@ -100,22 +102,22 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="499" y="159" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1536.824@0.0.1536.824" timestamp="1575950579072" />
-    <state width="1493" height="210" key="GridCell.Tab.0.bottom" timestamp="1576982145993">
+    <state width="1493" height="210" key="GridCell.Tab.0.bottom" timestamp="1576985066717">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="210" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1576982145993" />
-    <state width="1493" height="210" key="GridCell.Tab.0.center" timestamp="1576982145993">
+    <state width="1493" height="210" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1576985066717" />
+    <state width="1493" height="210" key="GridCell.Tab.0.center" timestamp="1576985066717">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="210" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1576982145993" />
-    <state width="1493" height="210" key="GridCell.Tab.0.left" timestamp="1576982145993">
+    <state width="1493" height="210" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1576985066717" />
+    <state width="1493" height="210" key="GridCell.Tab.0.left" timestamp="1576985066717">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="210" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1576982145993" />
-    <state width="1493" height="210" key="GridCell.Tab.0.right" timestamp="1576982145993">
+    <state width="1493" height="210" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1576985066717" />
+    <state width="1493" height="210" key="GridCell.Tab.0.right" timestamp="1576985066717">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="210" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1576982145993" />
+    <state width="1493" height="210" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1576985066717" />
     <state x="431" y="145" width="672" height="678" key="search.everywhere.popup" timestamp="1576908711930">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
