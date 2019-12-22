@@ -35,6 +35,15 @@ int CSP = -1;
 int PC_STACK[1000];
 int PSP = -1;
 
+int LOOP_STACK[1000];  // 1000 nested loop
+int LSP = -1;
+
+// The error code, set by virtual machine. Used to tell the main loop that the process is interrupted
+// Interrupt the vm if the code is not 0
+//
+// 0: No error
+// 1: Memory address error
+// 2: Native function error
 int ERROR_CODE = 0;
 
 void print_memory() {
@@ -106,6 +115,7 @@ int64_t true_ptr(int64_t ptr) {
     }
     if (ptr >= MEMORY_SIZE) {
         fprintf(stderr, "\nCannot access address %lld\n", ptr);
+        ERROR_CODE = 1;
         return 0;
     }
     return ptr;
@@ -139,17 +149,66 @@ void read_3_true_ptr(int64_t *reg1, int64_t *reg2, int64_t *reg3) {
     *reg3 = true_ptr(*reg3);
 }
 
-void int_cmp(int64_t *reg1, int64_t *reg2, int64_t *reg3, int64_t *reg4) {
-    read_3_true_ptr(reg1, reg2, reg3);
-}
+//void int_cmp(int64_t *reg1, int64_t *reg2, int64_t *reg3, int64_t *reg4) {
+//    read_3_true_ptr(reg1, reg2, reg3);
+//}
 
-void native_printf() {
+void native_printf(int64_t argc, const int64_t *argv) {
+    if (argc <= 0) {
+        printf("'printf' takes at least 1 argument");
+        ERROR_CODE = 1;
+        return;
+    }
+    int64_t fmt_end = argv[0];
+    while (MEMORY[fmt_end] != 0) fmt_end++;
+    int fmt_len = (int) (fmt_end - argv[0]);
+    char *fmt = malloc(fmt_len + 1);
+    memcpy(fmt, MEMORY + argv[0], fmt_len);
+    fmt[fmt_len] = '\0';
 
+    int i = 0;
+    int f = 0;
+    int a_index = 1;
+
+    while (i < fmt_len) {
+        char ch = fmt[i];
+        if (ch == '%') {
+            f = 1;
+        } else if (f) {
+            if (ch == 'd') {  // int
+                f = 0;
+                int64_t ptr = argv[a_index++];
+                int64_t value = bytes_to_int(MEMORY + ptr);
+                printf("%lld", value);
+            } else if (ch == 'c') {  // char
+                f = 0;
+                int64_t ptr = argv[a_index++];
+                unsigned char value = MEMORY[ptr];
+                printf("%c", value);
+            } else if (ch == 's') {  // string
+                f = 0;
+                int64_t ptr = argv[a_index++];
+                int64_t value_addr = true_ptr(bytes_to_int(MEMORY + ptr));
+//                printf("%lld\n", value_addr);
+
+                for (int64_t end = value_addr; MEMORY[end] != 0; end++) printf("%c", MEMORY[end]);
+            } else {
+                fprintf(stderr, "Unknown flag: '%c'\n", ch);
+                f = 0;
+            }
+        } else {
+            printf("%c", ch);
+        }
+        i++;
+    }
+
+    free(fmt);
 }
 
 void native_malloc(int64_t argc, int64_t ret_len, int64_t ret_ptr, int64_t *argv) {
     if (argc != 1 || ret_len != PTR_LEN) {
         printf("Unmatched arg length or return length");
+        ERROR_CODE = 2;
         return;
     }
     int64_t result = HEAP_START;
@@ -160,9 +219,30 @@ void native_clock(int64_t arg_count, int64_t ret_len, int64_t ret_ptr) {
     int64_t t = clock();
     if (arg_count != 0 || ret_len != INT_LEN) {
         printf("Unmatched arg length or return length");
+        ERROR_CODE = 2;
         return;
     }
     int_to_bytes(MEMORY + ret_ptr, t);
+}
+
+void native_free() {
+
+}
+
+void native_mem_copy(int64_t argc, const int64_t *argv) {
+    if (argc != 3) {
+        fprintf(stderr, "'mem_copy' takes 3 arguments, %lld given\n", argc);
+        ERROR_CODE = 2;
+        return;
+    }
+    int64_t dest_addr = argv[0];
+    int64_t src_addr = argv[1];
+    int64_t length_ptr = argv[2];
+    int64_t dest = true_ptr(bytes_to_int(MEMORY + dest_addr));
+    int64_t src = true_ptr(bytes_to_int(MEMORY + src_addr));
+    int64_t length = bytes_to_int(MEMORY + length_ptr);
+//    printf("%lld %lld %lld\n", dest, src, length);
+    mem_copy(src, dest, length);
 }
 
 void call_native(int64_t func, int64_t ret_ptr, int64_t ret_len, int64_t arg_count, int64_t *arg_array) {
@@ -172,6 +252,14 @@ void call_native(int64_t func, int64_t ret_ptr, int64_t ret_len, int64_t arg_cou
             break;
         case 2:  // malloc
             native_malloc(arg_count, ret_len, ret_ptr, arg_array);
+            break;
+        case 3:  // printf
+            native_printf(arg_count, arg_array);
+            break;
+        case 4:  // mem_copy
+            native_mem_copy(arg_count, arg_array);
+            break;
+        case 5:  // free
             break;
         default:
             printf("Unknown native function %lld", func);
@@ -223,13 +311,13 @@ void vm_run() {
                     reg6 = true_ptr(reg6);  // true arg ptr
                     mem_copy(reg6, SP, reg7);
                     SP += reg7;
-                    printf("%lld\n", reg6);
+//                    printf("%lld\n", reg6);
                 }
 
                 PC_STACK[++PSP] = PC;
                 CALL_STACK[++CSP] = reg5;
 
-                printf("sp: %lld\n", reg5);
+//                printf("sp: %lld\n", reg5);
 
                 PC = reg1;
                 break;
@@ -322,9 +410,10 @@ void vm_run() {
                 break;
             case 30:  // IF ZERO GOTO
                 read_2_ints(&reg1, &reg2);  // skip len, cond ptr
-                reg3 = true_ptr(reg2);  // true cond ptr
+                reg2 = true_ptr(reg2);  // true cond ptr
 
-                reg11 = MEMORY[reg3];
+                reg11 = MEMORY[reg2];
+//                printf("%d vvv\n", reg11);
                 if (reg11 == 0) {
                     PC += reg1;
                 }
@@ -336,26 +425,21 @@ void vm_run() {
                 reg6 = PC;  // PC backup
                 PC += reg4 * (INT_LEN + PTR_LEN);
 
-                int64_t *args = malloc(reg4 * 16);
+                int64_t *args = malloc(reg4 * 8);
                 for (reg9 = 0; reg9 < reg4; reg9++) {
                     reg7 = bytes_to_int(MEMORY + reg6);  // arg_ptr
                     reg6 += PTR_LEN;
-                    reg8 = bytes_to_int(MEMORY + reg6);  // arg_len
+//                    reg8 = bytes_to_int(MEMORY + reg6);  // arg_len
                     reg6 += INT_LEN;
                     reg7 = true_ptr(reg7);  // true arg ptr
-                    args[reg9 * 2] = reg7;
-                    args[reg9 * 2 + 1] = reg8;
+                    args[reg9] = reg7;
+//                    printf("%lld\n", reg7);
+//                    args[reg9 * 2 + 1] = reg8;
                 }
                 call_native(reg5, reg3, reg2, reg4, args);
 
                 free(args);
                 break;
-//            case 32:  // STORE ADDR
-//                read_2_ints(&reg1, &reg2);  // tar pos, relative addr
-//                reg1 = true_ptr(reg1);
-//                reg2 = true_ptr(reg2);
-//                int_to_bytes(MEMORY + reg1, reg2);
-//                break;
             case 33:  // UNPACK ADDR
                 read_3_ints(&reg1, &reg2, &reg3);  // result ptr, pointer address, length
                 reg1 = true_ptr(reg1);
@@ -375,9 +459,23 @@ void vm_run() {
                 printf("%lld %lld %lld\n", reg1, reg2, reg4);
                 mem_copy(reg2, reg4, reg3);
                 break;
+            case 35:  // STORE SP
+                LOOP_STACK[++LSP] = SP;
+//                printf("add: %lld ", SP);
+                break;
+            case 36:  // RESTORE SP
+                SP = LOOP_STACK[LSP--];
+//                printf("res: %lld ", SP);
+                break;
             default:
                 fprintf(stderr, "Unknown instruction %d\n", instruction);
                 return;
+        }
+//        printf("sp: %lld\n", SP);
+
+        if (SP >= LITERAL_START) {
+            fprintf(stderr, "Stack Overflow\n");
+            return;
         }
         if (ERROR_CODE != 0) {
             fprintf(stderr, "Error code: %d \n", ERROR_CODE);
